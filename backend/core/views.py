@@ -3,7 +3,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework.renderers import JSONRenderer
 from json import dumps, loads
-from core.models import Ongs
+from core.models import Ongs, Incidents
 
 
 @csrf_exempt
@@ -35,3 +35,22 @@ def ongs(request):
         })
 
     return JsonResponse(ongs, safe=False)
+
+
+@csrf_exempt
+def incidents(request):
+    if request.method == 'POST':
+        data = loads(request.body)
+        ong = request.headers['Authorization']
+
+        ong = Ongs.objects.get(id=ong)
+
+        incident = Incidents(
+            title=data['title'],
+            description=data['description'],
+            value=data['value'],
+            ong=ong
+        )
+        incident.save()
+
+        return JsonResponse({'id': incident.id}, safe=False)
