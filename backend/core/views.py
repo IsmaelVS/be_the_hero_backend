@@ -21,3 +21,17 @@ def ongs(request):
         ong.save()
 
         return JsonResponse({'id': ong.id}, safe=False)
+
+    all_ongs = Ongs.objects.all()
+    ongs = []
+    for ong in all_ongs:
+        ongs.append({
+            'id': ong.id,
+            'nome': ong.nome,
+            'email': ong.email,
+            'whatsapp': ong.whatsapp,
+            'cidade': ong.cidade,
+            'uf': ong.uf
+        })
+
+    return JsonResponse(ongs, safe=False)
