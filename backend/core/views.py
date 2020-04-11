@@ -107,3 +107,13 @@ def list_incidents_from_an_ong(request):
             })
 
         return JsonResponse(incidents, safe=False)
+
+
+@csrf_exempt
+def login(request):
+    if request.method == 'POST':
+        data = loads(request.body)
+
+        ong = Ongs.objects.get(id=data['id'])
+
+        return JsonResponse({'name': ong.nome}, safe=False)
