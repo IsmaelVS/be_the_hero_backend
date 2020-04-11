@@ -4,6 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from rest_framework.renderers import JSONRenderer
 from json import dumps, loads
 from core.models import Ongs, Incidents
+from django.core.paginator import Paginator
 
 
 @csrf_exempt
@@ -73,4 +74,6 @@ def incidents(request):
             'uf': ong.uf
         })
 
-    return JsonResponse(incidents, safe=False)
+    incidents = Paginator(incidents, 5)
+
+    return JsonResponse(incidents.page(page).object_list, safe=False)
