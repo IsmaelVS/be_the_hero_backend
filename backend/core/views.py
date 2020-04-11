@@ -77,3 +77,15 @@ def incidents(request):
     incidents = Paginator(incidents, 5)
 
     return JsonResponse(incidents.page(page).object_list, safe=False)
+
+
+@csrf_exempt
+def incident(request, id):
+    if request.method == 'DELETE':
+        ong_id = request.headers['Authorization']
+        incident = Incidents.objects.get(id=id)
+        if incident.ong_id == int(ong_id):
+            incident.delete()
+            return JsonResponse({'DELETE': id}, safe=False, status=204)
+
+        return JsonResponse({'Error': 'Operation not permitted'}, safe=False, status=401)
