@@ -54,3 +54,23 @@ def incidents(request):
         incident.save()
 
         return JsonResponse({'id': incident.id}, safe=False)
+
+    all_incidents = Incidents.objects.all()
+    page = request.GET['page']
+    incidents = []
+    for i, incident in enumerate(all_incidents):
+        ong = Ongs.objects.get(id=incident.ong_id)
+        incidents.append({
+            'id': incident.id,
+            'title': incident.title,
+            'description': incident.description,
+            'value': incident.value,
+            'ong': incident.ong_id,
+            'nome': ong.nome,
+            'email': ong.email,
+            'whatsapp': ong.whatsapp,
+            'cidade': ong.cidade,
+            'uf': ong.uf
+        })
+
+    return JsonResponse(incidents, safe=False)
