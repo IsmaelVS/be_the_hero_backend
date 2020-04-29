@@ -5,7 +5,7 @@ from core import views
 
 
 urlpatterns = [
-    path('ongs/', views.ongs),
+    path('ongs/', views.OngsView.as_view()),
     path('incidents/', views.incidents),
     path('incidents/<int:id>/', views.incident),
     path('incidents/ong/', views.list_incidents_from_an_ong),
