@@ -1,82 +1,101 @@
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from rest_framework.renderers import JSONRenderer
 from json import dumps, loads
-from core.models import Ongs, Incidents
+from core.models import ONGs, Incidents
 from django.core.paginator import Paginator
+from django.views.generic import View
 
 
-@csrf_exempt
-def ongs(request):
-    if request.method == 'POST':
+@method_decorator(csrf_exempt, name='dispatch')
+class OngsView(View):
+    def get(self, request):
+        all_ongs = ONGs.objects.all()
+        ongs = []
+        for ong in all_ongs:
+            ongs.append({
+                'id': ong.id,
+                'name': ong.name,
+                'email': ong.email,
+                'whatsapp': ong.whatsapp,
+                'city': ong.city,
+                'uf': ong.uf
+            })
+
+        return JsonResponse(ongs, safe=False)
+
+    def post(self, request):
         body = loads(request.body)
 
-        ong = Ongs(
-            nome=body['nome'],
-            email=body['email'],
-            whatsapp=body['whatsapp'],
-            cidade=body['cidade'],
-            uf=body['uf']
-        )
-        ong.save()
+        try:
+            ong = ONGs(
+                name=body['name'],
+                email=body['email'],
+                whatsapp=body['whatsapp'],
+                city=body['city'],
+                uf=body['uf']
+            )
 
-        return JsonResponse({'id': ong.id}, safe=False)
+            ong.save()
 
-    all_ongs = Ongs.objects.all()
-    ongs = []
-    for ong in all_ongs:
-        ongs.append({
-            'id': ong.id,
-            'nome': ong.nome,
-            'email': ong.email,
-            'whatsapp': ong.whatsapp,
-            'cidade': ong.cidade,
-            'uf': ong.uf
-        })
+        except KeyError:
+            return JsonResponse({'Fail': 'Data is missing.'}, status=400)
 
-    return JsonResponse(ongs, safe=False)
+        return JsonResponse({'id': ong.id}, status=201, safe=False)
 
 
 @csrf_exempt
 def incidents(request):
     if request.method == 'POST':
         data = loads(request.body)
-        ong = request.headers['Authorization']
 
-        ong = Ongs.objects.get(id=ong)
+        try:
+            ong = request.headers['Authorization']
 
-        incident = Incidents(
-            title=data['title'],
-            description=data['description'],
-            value=data['value'],
-            ong=ong
-        )
-        incident.save()
+            if not ONGs.objects.filter(id=ong):
+                return JsonResponse({'Error': 'Ong invalid.'}, status=400)
 
-        return JsonResponse({'id': incident.id}, safe=False)
+            ong = ONGs.objects.get(id=ong)
+
+            incident = Incidents(
+                title=data['title'],
+                description=data['description'],
+                value=data['value'],
+                ong=ong
+            )
+
+            incident.save()
+
+        except KeyError:
+            return JsonResponse({'Fail': 'Data is missing.'}, status=400)
+
+        return JsonResponse({'id': incident.id}, status=201, safe=False)
 
     all_incidents = Incidents.objects.all()
-    page = request.GET['page']
     incidents = []
     for i, incident in enumerate(all_incidents):
-        ong = Ongs.objects.get(id=incident.ong_id)
+        ong = ONGs.objects.get(id=incident.ong_id)
         incidents.append({
             'id': incident.id,
             'title': incident.title,
             'description': incident.description,
             'value': incident.value,
             'ong': incident.ong_id,
-            'nome': ong.nome,
+            'name': ong.name,
             'email': ong.email,
             'whatsapp': ong.whatsapp,
-            'cidade': ong.cidade,
+            'city': ong.city,
             'uf': ong.uf
         })
 
-    incidents = Paginator(incidents, 5)
+    if 'page' in request.GET:
+        page = request.GET['page']
+        incidents = Paginator(incidents, 5)
 
-    return JsonResponse(incidents.page(page).object_list, safe=False)
+        return JsonResponse(incidents.page(page).object_list, safe=False)
+    return JsonResponse(incidents, safe=False)
 
 
 @csrf_exempt
@@ -88,7 +107,8 @@ def incident(request, id):
             incident.delete()
             return JsonResponse({'DELETE': id}, safe=False, status=204)
 
-        return JsonResponse({'Error': 'Operation not permitted'}, safe=False, status=401)
+        return JsonResponse({'Error': 'Operation not permitted'},
+                            safe=False, status=401)
 
 
 @csrf_exempt
@@ -114,6 +134,6 @@ def login(request):
     if request.method == 'POST':
         data = loads(request.body)
 
-        ong = Ongs.objects.get(id=data['id'])
+        ong = ONGs.objects.get(id=data['id'])
 
-        return JsonResponse({'name': ong.nome}, safe=False)
+        return JsonResponse({'name': ong.name}, safe=False)
