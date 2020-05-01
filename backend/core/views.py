@@ -14,7 +14,7 @@ from django.views.generic import View
 class OngsView(View):
     """Class Based Views to ONGs."""
 
-    def get(self, request) -> json:
+    def get(self, request) -> dict:
         """List all ONGs."""
         all_ongs = ONGs.objects.all()
         ongs = []
@@ -30,7 +30,7 @@ class OngsView(View):
 
         return JsonResponse(ongs, safe=False)
 
-    def post(self, request) -> json:
+    def post(self, request) -> dict:
         """Create new ONG."""
         body = loads(request.body)
 
@@ -55,7 +55,7 @@ class OngsView(View):
 class IncidentsView(View):
     """Class Based Views to Incidents."""
 
-    def get(self, request) -> json:
+    def get(self, request) -> dict:
         """List all Incidents."""
         all_incidents = Incidents.objects.all()
         incidents = []
@@ -78,10 +78,14 @@ class IncidentsView(View):
             page = request.GET['page']
             incidents = Paginator(incidents, 5)
 
+            if int(page) > incidents.num_pages:
+                return JsonResponse(
+                    {'Error': 'Invalid pagination.'}, status=400)
+
             return JsonResponse(incidents.page(page).object_list, safe=False)
         return JsonResponse(incidents, safe=False)
 
-    def post(self, request) -> json:
+    def post(self, request) -> dict:
         """Create new incident."""
         data = loads(request.body)
 
