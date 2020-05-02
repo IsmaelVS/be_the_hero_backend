@@ -213,7 +213,7 @@ class TestsIncidents(TestCase):
         """List all Incidents."""
         response = self.client.get('/incidents/')
 
-        ongs = Incidents.objects.count()
+        incidents = Incidents.objects.count()
         response_data = loads(response.content)
 
         self.assertEqual(response.status_code, 200)
@@ -222,13 +222,13 @@ class TestsIncidents(TestCase):
         self.assertContains(response, 'value')
         self.assertEqual(response_data[0]['description'],
                          'hihihihihihihihihihihihihihi')
-        self.assertEqual(ongs, len(response_data))
+        self.assertEqual(incidents, len(response_data))
 
     def test_list_incidents_with_pagination(self) -> None:
         """List Incidents with paginate."""
         response = self.client.get('/incidents/?page=1')
 
-        ongs = Incidents.objects.count()
+        incidents = Incidents.objects.count()
         response_data = loads(response.content)
 
         self.assertEqual(response.status_code, 200)
@@ -237,14 +237,93 @@ class TestsIncidents(TestCase):
         self.assertContains(response, 'value')
         self.assertEqual(response_data[0]['description'],
                          'hihihihihihihihihihihihihihi')
-        self.assertEqual(ongs, len(response_data))
+        self.assertEqual(incidents, len(response_data))
 
     def test_list_incidents_with_invalid_pagination(self) -> None:
         """List Incidents with invalid pagination."""
         response = self.client.get('/incidents/?page=175')
 
-        ongs = Incidents.objects.count()
         response_data = loads(response.content)
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response_data['Error'], 'Invalid pagination.')
+
+
+class TestsDeleteIncidentView(TestCase):
+    """Delete incident testing class."""
+
+    def setUp(self) -> None:
+        """Prepare environment for tests."""
+        self.client = Client(enforce_csrf_checks=False)
+
+        data_ong = dumps({
+            "name": "ONG",
+            "email": "hihi@ong.com",
+            "whatsapp": "1111111111",
+            "city": "Capão Redondo",
+            "uf": "SP"
+        })
+
+        self.client.post('/ongs/',
+                         content_type="application/json", data=data_ong)
+
+        ong = ONGs.objects.get(id=1)
+
+        data_inc = dumps({
+            "title": "Caso - teste",
+            "description": "hihihihihihihihihihihihihihi",
+            "value": "1100",
+            "ong": ong.id,
+        })
+
+        header = {'HTTP_Authorization': ong.id}
+
+        self.client.post('/incidents/',
+                         content_type="application/json",
+                         data=data_inc, **header
+                         )
+
+    def test_delete_incident(self) -> None:
+        """Delete Incident."""
+        header = {'HTTP_Authorization': 1}
+        response = self.client.delete('/incidents/1/', **header)
+
+        incidents = Incidents.objects.count()
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(incidents, 0)
+
+    def test_delete_incident_with_invalid_ong(self) -> None:
+        """Delete Incident with invalid header."""
+        header = {'HTTP_Authorization': 2}
+        response = self.client.delete('/incidents/1/', **header)
+
+        incidents = Incidents.objects.count()
+        response_data = loads(response.content)
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response_data['Error'], 'Operation not permitted.')
+        self.assertEqual(incidents, 1)
+
+    def test_delete_incident_with_invalid_incident(self) -> None:
+        """Delete Incident with invalid params."""
+        header = {'HTTP_Authorization': 1}
+        response = self.client.delete('/incidents/2/', **header)
+
+        incidents = Incidents.objects.count()
+        response_data = loads(response.content)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response_data['Error'], 'Incident invalid.')
+        self.assertEqual(incidents, 1)
+
+    def test_delete_incident_without_header(self) -> None:
+        """Delete Incident without header."""
+        response = self.client.delete('/incidents/1/')
+
+        incidents = Incidents.objects.count()
+        response_data = loads(response.content)
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response_data['Error'], 'Operation not permitted.')
+        self.assertEqual(incidents, 1)
