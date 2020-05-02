@@ -137,11 +137,18 @@ class DeleteIncidentView(View):
                             safe=False, status=401)
 
 
-@csrf_exempt
-def list_incidents_from_an_ong(request):
-    if request.method == 'GET':
+@method_decorator(csrf_exempt, name='dispatch')
+class ListIncidentFromAnONGView(View):
+    """Class Based Views to list incidents from an ONG."""
+
+    def get(self, request) -> dict:
+        """List incidents."""
         ong_id = request.headers['Authorization']
         all_incidents = Incidents.objects.filter(ong_id=ong_id)
+
+        if not all_incidents:
+            return JsonResponse({'Error': 'Invalid ONG.'}, status=400)
+
         incidents = []
         for incident in all_incidents:
             incidents.append({
@@ -155,10 +162,16 @@ def list_incidents_from_an_ong(request):
         return JsonResponse(incidents, safe=False)
 
 
-@csrf_exempt
-def login(request):
-    if request.method == 'POST':
+@method_decorator(csrf_exempt, name='dispatch')
+class LoginView(View):
+    """Class Based Views to login."""
+
+    def post(self, request) -> dict:
+        """Login in application."""
         data = loads(request.body)
+
+        if not ONGs.objects.filter(id=data['id']):
+            return JsonResponse({'Error': 'invalid ONG id.'}, status=401)
 
         ong = ONGs.objects.get(id=data['id'])
 
