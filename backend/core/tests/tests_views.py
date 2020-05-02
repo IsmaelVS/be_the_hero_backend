@@ -327,3 +327,128 @@ class TestsDeleteIncidentView(TestCase):
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response_data['Error'], 'Operation not permitted.')
         self.assertEqual(incidents, 1)
+
+
+class TestsListIncidentFromAnONGView(TestCase):
+    """List incident in the an ONG."""
+
+    def setUp(self) -> None:
+        """Prepare environment for tests."""
+        self.client = Client(enforce_csrf_checks=False)
+
+        data_ong = dumps({
+            "name": "ONG",
+            "email": "hihi@ong.com",
+            "whatsapp": "1111111111",
+            "city": "Capão Redondo",
+            "uf": "SP"
+        })
+
+        self.client.post('/ongs/',
+                         content_type="application/json", data=data_ong)
+
+        ong = ONGs.objects.get(id=1)
+
+        data_inc = dumps({
+            "title": "Caso - teste",
+            "description": "hihihihihihihihihihihihihihi",
+            "value": "1100",
+            "ong": ong.id,
+        })
+
+        header = {'HTTP_Authorization': ong.id}
+
+        self.client.post('/incidents/',
+                         content_type="application/json",
+                         data=data_inc, **header
+                         )
+
+    def test_list_incident_from_an_ONG(self) -> None:
+        """List all incidents from an ONG."""
+        header = {'HTTP_Authorization': 1}
+        response = self.client.get('/incidents/ong/', **header)
+
+        incidents = Incidents.objects.count()
+        response_data = loads(response.content)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id')
+        self.assertContains(response, 'title')
+        self.assertContains(response, 'value')
+        self.assertEqual(response_data[0]['description'],
+                         'hihihihihihihihihihihihihihi')
+        self.assertEqual(incidents, 1)
+
+    def test_list_incident_with_invalid_ONG(self) -> None:
+        """List all incidents with invalid ONG."""
+        header = {'HTTP_Authorization': 177}
+        response = self.client.get('/incidents/ong/', **header)
+
+        response_data = loads(response.content)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response_data['Error'], 'Invalid ONG.')
+
+
+class TestsLoginView(TestCase):
+    """Login in application."""
+
+    def setUp(self) -> None:
+        """Prepare environment for tests."""
+        self.client = Client(enforce_csrf_checks=False)
+
+        data_ong = dumps({
+            "name": "ONG",
+            "email": "hihi@ong.com",
+            "whatsapp": "1111111111",
+            "city": "Capão Redondo",
+            "uf": "SP"
+        })
+
+        self.client.post('/ongs/',
+                         content_type="application/json", data=data_ong)
+
+        ong = ONGs.objects.get(id=1)
+
+        data_inc = dumps({
+            "title": "Caso - teste",
+            "description": "hihihihihihihihihihihihihihi",
+            "value": "1100",
+            "ong": ong.id,
+        })
+
+        header = {'HTTP_Authorization': ong.id}
+
+        self.client.post('/incidents/',
+                         content_type="application/json",
+                         data=data_inc, **header
+                         )
+
+    def test_login(self) -> None:
+        """Login in application with success."""
+        data = dumps({
+            "id": 1,
+        })
+
+        response = self.client.post(
+            '/login/', content_type="application/json", data=data)
+
+        response_data = loads(response.content)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'name')
+        self.assertEqual(response_data['name'], 'ONG')
+
+    def test_login_with_invalid_ong(self) -> None:
+        """Login in application with fail."""
+        data = dumps({
+            "id": 171,
+        })
+
+        response = self.client.post(
+            '/login/', content_type="application/json", data=data)
+
+        response_data = loads(response.content)
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response_data['Error'], 'invalid ONG id.')
