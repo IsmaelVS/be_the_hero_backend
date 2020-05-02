@@ -112,16 +112,28 @@ class IncidentsView(View):
         return JsonResponse({'id': incident.id}, status=201, safe=False)
 
 
-@csrf_exempt
-def incident(request, id):
-    if request.method == 'DELETE':
+@method_decorator(csrf_exempt, name='dispatch')
+class DeleteIncidentView(View):
+    """Class Based Views to deletar Incidents."""
+
+    def delete(self, request, id) -> dict:
+        """Delete incident."""
+        if not 'Authorization' in request.headers:
+            return JsonResponse(
+                {'Error': 'Operation not permitted.'}, status=401)
+
         ong_id = request.headers['Authorization']
+
+        if not Incidents.objects.filter(id=id):
+            return JsonResponse({'Error': 'Incident invalid.'}, status=400)
+
         incident = Incidents.objects.get(id=id)
+
         if incident.ong_id == int(ong_id):
             incident.delete()
             return JsonResponse({'DELETE': id}, safe=False, status=204)
 
-        return JsonResponse({'Error': 'Operation not permitted'},
+        return JsonResponse({'Error': 'Operation not permitted.'},
                             safe=False, status=401)
 
 
